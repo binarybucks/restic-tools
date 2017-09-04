@@ -59,6 +59,10 @@ do_local_backup () {
 
 	. /etc/backup/local.config
 	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
+
+	if [ -n "$HEALTHCHECK_URL" ]; then
+		curl -fsS --retry 4 "$HEALTHCHECK_URL"  > /dev/null
+	fi
 }
 
 do_monitor () {
