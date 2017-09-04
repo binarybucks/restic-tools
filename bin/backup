@@ -1,0 +1,117 @@
+#! /bin/bash
+set -uo pipefail
+
+#backup li run 
+#backup li 
+
+display_usage() { 
+	echo -e "Usage: ./backup <repo> (local|monitor <host> <warning> <critical>|restic arguments) \n"
+} 
+
+if [ "$#" -lt 2 ]; then
+	display_usage
+    	exit 1
+fi
+
+
+TARGET=$1
+ACTION=$2
+RESTIC=$(which restic)
+
+check_config() {
+	CONFIG=/etc/backup/$1.repo
+	if [ ! -f $CONFIG ]; then
+	    	echo "Repo config file $CONFIG not found!"
+    	    	exit 1
+	else
+		set -a
+		source $CONFIG 
+		set +a
+        fi
+
+
+	if [[ ! -e $RESTIC ]]; then             
+    		echo "Restic binary not found"
+    		exit 1                           
+	fi
+	
+
+}
+
+handle_params () {
+
+	if [ $2 == "local" ]; then
+    		do_local_backup
+	elif [ $2 == "monitor" ]; then
+		do_monitor $@
+	else
+		shift 1
+		$RESTIC $@
+        fi
+}
+
+
+do_local_backup () {
+        if [ ! -f /etc/backup/local.config ]; then
+                echo "local backup config file $/etc/backup/local.config not found!"
+                exit 1
+        fi
+
+	. /etc/backup/local.config
+	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
+}
+
+do_monitor () {
+	if [ $# -lt 5 ]; then
+		display_usage
+		exit 1;
+	fi
+	WARN=$4
+	CRIT=$5
+
+	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
+	LAST=`$RESTIC	snapshots -H $3 | sed 1,2d | tail -n 1`
+	if [ ! $? -eq 0 ]; then
+		exit 1;
+	fi
+
+	IFS=' ' read HASH DATE TIME HOST DIR <<< "$LAST"
+
+	if [ -z "$HASH" ]; then 
+		echo "UNKNOWN - No snapshot found for $3"
+		exit 4;
+	fi
+
+	
+	# Compute time difference since last snapshot
+	BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
+	NOW_TST=$(date +%s)
+	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
+	
+	DIFF_H=`expr $DIFF_S / 3600`
+
+	MESSAGE="Last snapshot #$HASH ${DIFF_H}h ago"
+        RET=0
+	RET_H="OK"
+		
+	if [ $DIFF_H -lt $WARN ]; then
+		RET=0	
+		RET_H="OK"
+	elif [ $DIFF_H -lt $CRIT ]; then
+                RET=1
+                RET_H="WARNING"
+	else 
+                RET=2
+                RET_H="CRITICAL"
+
+	fi
+	echo "$RET_H - $MESSAGE"
+	return $RET	
+}
+
+
+
+check_config $@
+handle_params $@
+
+
