@@ -1,6 +1,6 @@
 # restic-tools
 Wrapper around restic backup to simplify certain tasks. 
-Repositories can be configured in /etc/backup/$REPO.repo
+Repositories can be configured in `/etc/backup/$REPO.repo`. 
 Local includes and excludes in `/etc/backup/local.config` or `/etc/backup/local.exclude`
 
 * `backup $REPO local` for local backup to repo configured by 
