@@ -5,7 +5,7 @@ set -uo pipefail
 #backup li 
 
 display_usage() { 
-	echo -e "Usage: ./backup <repo> (local|monitor <host> <warning> <critical>|restic arguments) \n"
+	echo "Usage: $0 <repo> (local|monitor <host> <warning> <critical>|restic arguments)" >&2
 } 
 
 if [ "$#" -lt 2 ]; then
@@ -91,7 +91,14 @@ do_monitor () {
 
 
 	# Compute time difference since last snapshot
-	BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
+	case $(uname -s) in
+		Darwin)
+			BACKUP_TST=$(date -j -f "%Y-%m-%d %H:%M:%S" "$DATE $TIME" "+%s")
+			;;
+		*)
+			BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
+			;;
+	esac
 	NOW_TST=$(date +%s)
 	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
 
