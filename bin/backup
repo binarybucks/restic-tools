@@ -17,6 +17,7 @@ fi
 TARGET=$1
 ACTION=$2
 RESTIC=$(which restic)
+CURL=$(which curl)
 
 check_config() {
 	CONFIG=/etc/backup/$1.repo
@@ -30,11 +31,11 @@ check_config() {
         fi
 
 
-	if [[ ! -e $RESTIC ]]; then             
+	if [[ ! -e $RESTIC ]]; then
     		echo "Restic binary not found"
-    		exit 1                           
+    		exit 1
 	fi
-	
+
 
 }
 
@@ -61,7 +62,9 @@ do_local_backup () {
 	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
 
 	if [ -n "$HEALTHCHECK_URL" ]; then
-		curl -fsS --retry 4 "$HEALTHCHECK_URL"  > /dev/null
+		if [[ ! -e $CURL ]]; then
+			$CURL -fsS --retry 4 "$HEALTHCHECK_URL"  > /dev/null
+		fi
 	fi
 }
 
@@ -74,7 +77,7 @@ do_monitor () {
 	CRIT=$5
 
 	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
-	LAST=`$RESTIC	snapshots -H $3 | sed 1,2d | tail -n 1`
+	LAST=`$RESTIC	snapshots --no-lock -H $3 | sed 1,2d | tail -n 1`
 	if [ ! $? -eq 0 ]; then
 		exit 1;
 	fi
@@ -86,20 +89,20 @@ do_monitor () {
 		exit 4;
 	fi
 
-	
+
 	# Compute time difference since last snapshot
 	BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
 	NOW_TST=$(date +%s)
 	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
-	
+
 	DIFF_H=`expr $DIFF_S / 3600`
 
 	MESSAGE="Last snapshot #$HASH ${DIFF_H}h ago"
         RET=0
 	RET_H="OK"
-		
+
 	if [ $DIFF_H -lt $WARN ]; then
-		RET=0	
+		RET=0
 		RET_H="OK"
 	elif [ $DIFF_H -lt $CRIT ]; then
                 RET=1
@@ -110,7 +113,7 @@ do_monitor () {
 
 	fi
 	echo "$RET_H - $MESSAGE"
-	return $RET	
+	return $RET
 }
 
 
