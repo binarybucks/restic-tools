@@ -18,6 +18,8 @@ TARGET=$1
 ACTION=$2
 RESTIC=$(which restic)
 CURL=$(which curl)
+GDATE=$(which gdate)            # try using gdate (on macOS: brew install coreutils)
+GDATE=${GDATE:="$(which date)"} # .. or date else
 
 check_config() {
 	CONFIG=/etc/backup/$1.repo
@@ -91,8 +93,8 @@ do_monitor () {
 
 
 	# Compute time difference since last snapshot
-	BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
-	NOW_TST=$(date +%s)
+	BACKUP_TST=$($GDATE -d "$DATE $TIME" +"%s" )
+	NOW_TST=$($GDATE +%s)
 	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
 
 	DIFF_H=`expr $DIFF_S / 3600`
