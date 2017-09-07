@@ -10,7 +10,6 @@
 /var/run
 /var/tmp
 /var/log
-/tmp
 *.swp
 /boot
 /lib
