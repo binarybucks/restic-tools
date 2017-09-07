@@ -31,7 +31,7 @@ check_config() {
         fi
 
 
-	if [[ ! -e $RESTIC ]]; then
+	if [[ ! -x $RESTIC ]]; then
     		echo "Restic binary not found"
     		exit 1
 	fi
@@ -62,7 +62,7 @@ do_local_backup () {
 	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
 
 	if [ -n "$HEALTHCHECK_URL" ]; then
-		if [[ ! -e $CURL ]]; then
+		if [[ -x $CURL ]]; then
 			$CURL -fsS --retry 4 "$HEALTHCHECK_URL"  > /dev/null
 		fi
 	fi
