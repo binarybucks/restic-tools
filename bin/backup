@@ -59,9 +59,18 @@ do_local_backup () {
         fi
 
 	. /etc/backup/local.config
+
+        if [[ -x /etc/backup/local.pre ]]; then
+        	/etc/backup/local.pre $TARGET
+ 	fi
+
 	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
 
-	if [ -n "$HEALTHCHECK_URL" ]; then
+        if [[ -x /etc/backup/local.post ]]; then
+                /etc/backup/local.post $TARGET
+	fi
+
+	if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
 		if [[ -x $CURL ]]; then
 			$CURL -fsS --retry 4 "$HEALTHCHECK_URL"  > /dev/null
 		fi
