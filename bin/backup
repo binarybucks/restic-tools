@@ -86,8 +86,9 @@ do_monitor () {
 	CRIT=$5
 
 	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
-	LAST=`$RESTIC	snapshots --no-lock -H $3 | sed 1,2d | tail -n 1`
+	LAST=`$RESTIC snapshots --compact --no-lock -H $3 | sed 1,2d | tail -n 1`
 	if [ ! $? -eq 0 ]; then
+		echo "WARNING - restic command returned an error"
 		exit 1;
 	fi
 
