@@ -54,11 +54,14 @@ do_local_backup () {
 
 	. /etc/backup/local.config
 
+	# define an empty default if BACKUP_ARGS is not set
+	BACKUP_ARGS=${BACKUP_ARGS:-""}
+
         if [[ -x /etc/backup/local.pre ]]; then
         	/etc/backup/local.pre $TARGET
  	fi
 
-	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR
+	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_ARGS $BACKUP_DIR
 
         if [[ -x /etc/backup/local.post ]]; then
                 /etc/backup/local.post $TARGET
