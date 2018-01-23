@@ -1,18 +1,14 @@
 #! /bin/bash
 set -uo pipefail
 
-#backup li run 
-#backup li 
-
-display_usage() { 
+display_usage() {
 	echo "Usage: $0 <repo> (local|monitor <host> <warning> <critical>|restic arguments)" >&2
-} 
+}
 
 if [ "$#" -lt 2 ]; then
 	display_usage
     	exit 1
 fi
-
 
 TARGET=$1
 ACTION=$2
@@ -26,7 +22,7 @@ check_config() {
     	    	exit 1
 	else
 		set -a
-		source $CONFIG 
+		source $CONFIG
 		set +a
         fi
 
@@ -35,8 +31,6 @@ check_config() {
     		echo "Restic binary not found"
     		exit 1
 	fi
-
-
 }
 
 handle_params () {
@@ -60,11 +54,14 @@ do_local_backup () {
 
 	. /etc/backup/local.config
 
+	# define an empty default if BACKUP_ARGS is not set
+	BACKUP_ARGS=${BACKUP_ARGS:-""}
+
         if [[ -x /etc/backup/local.pre ]]; then
         	/etc/backup/local.pre $TARGET
  	fi
 
-	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_DIR 
+	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_ARGS $BACKUP_DIR
 
         if [[ -x /etc/backup/local.post ]]; then
                 /etc/backup/local.post $TARGET
@@ -94,7 +91,7 @@ do_monitor () {
 
 	IFS=' ' read HASH DATE TIME HOST DIR <<< "$LAST"
 
-	if [ -z "$HASH" ]; then 
+	if [ -z "$HASH" ]; then
 		echo "UNKNOWN - No snapshot found for $3"
 		exit 4;
 	fi
@@ -109,6 +106,7 @@ do_monitor () {
 			BACKUP_TST=$(date -d "$DATE $TIME" +"%s" )
 			;;
 	esac
+
 	NOW_TST=$(date +%s)
 	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
 
@@ -124,7 +122,7 @@ do_monitor () {
 	elif [ $DIFF_H -lt $CRIT ]; then
                 RET=1
                 RET_H="WARNING"
-	else 
+	else
                 RET=2
                 RET_H="CRITICAL"
 
@@ -133,9 +131,5 @@ do_monitor () {
 	return $RET
 }
 
-
-
 check_config $@
 handle_params $@
-
-
