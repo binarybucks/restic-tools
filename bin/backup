@@ -11,18 +11,17 @@ if [ "$#" -lt 2 ]; then
 fi
 
 TARGET=$1
-ACTION=$2
 RESTIC=$(which restic)
 CURL=$(which curl)
 
 check_config() {
 	CONFIG=/etc/backup/$1.repo
-	if [ ! -f $CONFIG ]; then
+	if [ ! -f "$CONFIG" ]; then
 	    	echo "Repo config file $CONFIG not found!"
     	    	exit 1
 	else
 		set -a
-		source $CONFIG
+		source "$CONFIG"
 		set +a
         fi
 
@@ -35,13 +34,13 @@ check_config() {
 
 handle_params () {
 
-	if [ $2 == "local" ]; then
+	if [ "$2" == "local" ]; then
     		do_local_backup
-	elif [ $2 == "monitor" ]; then
-		do_monitor $@
+	elif [ "$2" == "monitor" ]; then
+		do_monitor "$@"
 	else
 		shift 1
-		$RESTIC $@
+		$RESTIC "$@"
         fi
 }
 
@@ -57,14 +56,14 @@ do_local_backup () {
 	# define an empty default if BACKUP_ARGS is not set
 	BACKUP_ARGS=${BACKUP_ARGS:-""}
 
-        if [[ -x /etc/backup/local.pre ]]; then
-        	/etc/backup/local.pre $TARGET
+	if [[ -x /etc/backup/local.pre ]]; then
+		/etc/backup/local.pre "$TARGET"
  	fi
 
-	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_ARGS $BACKUP_DIR
+	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname "$BACKUP_HOSTNAME" "$BACKUP_ARGS" "$BACKUP_DIR"
 
-        if [[ -x /etc/backup/local.post ]]; then
-                /etc/backup/local.post $TARGET
+	if [[ -x /etc/backup/local.post ]]; then
+	/etc/backup/local.post "$TARGET"
 	fi
 
 	if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
@@ -83,7 +82,7 @@ do_monitor () {
 	CRIT=$5
 
 	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
-	LAST=`$RESTIC snapshots --compact --no-lock -H $3 | sed 1,2d | head -n -2 | tail -n 1`
+	LAST=$($RESTIC snapshots --compact --no-lock -H "$3" | sed 1,2d | head -n -2 | tail -n 1)
 	if [ ! $? -eq 0 ]; then
 		echo "WARNING - restic command returned an error"
 		exit 1;
@@ -108,18 +107,18 @@ do_monitor () {
 	esac
 
 	NOW_TST=$(date +%s)
-	DIFF_S=`expr $NOW_TST - $BACKUP_TST`
+	DIFF_S=$((NOW_TST - BACKUP_TST))
 
-	DIFF_H=`expr $DIFF_S / 3600`
+	DIFF_H=$((DIFF_S / 3600))
 
 	MESSAGE="Last snapshot #$HASH ${DIFF_H}h ago"
         RET=0
 	RET_H="OK"
 
-	if [ $DIFF_H -lt $WARN ]; then
+	if [ "$DIFF_H" -lt "$WARN" ]; then
 		RET=0
 		RET_H="OK"
-	elif [ $DIFF_H -lt $CRIT ]; then
+	elif [ "$DIFF_H" -lt "$CRIT" ]; then
                 RET=1
                 RET_H="WARNING"
 	else
@@ -128,8 +127,8 @@ do_monitor () {
 
 	fi
 	echo "$RET_H - $MESSAGE"
-	return $RET
+	return "$RET"
 }
 
-check_config $@
-handle_params $@
+check_config "$@"
+handle_params "$@"
