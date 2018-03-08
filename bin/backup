@@ -2,7 +2,7 @@
 set -uo pipefail
 
 display_usage() {
-	echo "Usage: $0 <repo> (local|monitor <host> <warning> <critical>|restic arguments)" >&2
+	echo "Usage: $0 <repo> (<backup set>|monitor <host> <warning> <critical>|restic arguments)" >&2
 }
 
 if [ "$#" -lt 2 ]; then
@@ -34,9 +34,9 @@ check_config() {
 }
 
 handle_params () {
-
-	if [ $2 == "local" ]; then
-    		do_local_backup
+  CONFIG=/etc/backup/$2.config
+  if [ -f $CONFIG ]; then
+	  		do_backup $CONFIG
 	elif [ $2 == "monitor" ]; then
 		do_monitor $@
 	else
@@ -46,25 +46,35 @@ handle_params () {
 }
 
 
-do_local_backup () {
-        if [ ! -f /etc/backup/local.config ]; then
-                echo "local backup config file $/etc/backup/local.config not found!"
-                exit 1
-        fi
+do_backup () {
+  CONFIG=$1
+  PRE=${1%.config}.pre
+  POST=${1%.config}.post
+  EXCLUDE=${1%.config}.exclude
+  
+  if [ ! -f $CONFIG ]; then
+          echo "backup config file $CONFIG not found!"
+          exit 1
+  fi
 
-	. /etc/backup/local.config
+  if [ ! -f $EXCLUDE ]; then
+          echo "backup exclude file $EXCLUDE not found!"
+          exit 1
+  fi
+
+	. $CONFIG
 
 	# define an empty default if BACKUP_ARGS is not set
 	BACKUP_ARGS=${BACKUP_ARGS:-""}
 
-        if [[ -x /etc/backup/local.pre ]]; then
-        	/etc/backup/local.pre $TARGET
+  if [[ -x $PRE ]]; then
+    $PRE $TARGET
  	fi
 
-	$RESTIC --exclude-file /etc/backup/local.exclude backup --hostname $BACKUP_HOSTNAME $BACKUP_ARGS $BACKUP_DIR
+	$RESTIC --exclude-file $EXCLUDE backup --hostname $BACKUP_HOSTNAME $BACKUP_ARGS $BACKUP_DIR
 
-        if [[ -x /etc/backup/local.post ]]; then
-                /etc/backup/local.post $TARGET
+        if [[ -x $POST ]]; then
+                $POST $TARGET
 	fi
 
 	if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
