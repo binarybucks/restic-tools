@@ -35,13 +35,14 @@ check_config() {
 
 handle_params () {
 
+	. /etc/backup/local.config
 	if [ $2 == "local" ]; then
     		do_local_backup
 	elif [ $2 == "monitor" ]; then
 		do_monitor $@
 	else
 		shift 1
-		$RESTIC $@
+		$RESTIC $RESTIC_ARGS $@
         fi
 }
 
@@ -82,8 +83,10 @@ do_monitor () {
 	WARN=$4
 	CRIT=$5
 
+	SNAPS=`$RESTIC $RESTIC_ARGS snapshots --compact --no-lock -H $3`
 	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
-	LAST=`$RESTIC snapshots --compact --no-lock -H $3 | sed 1,2d | head -n -2 | tail -n 1`
+	LAST=`sed 1,2d <<< $SNAPS | head -n -2 | tail -n 1`
+  COUNT=`tail -n 1 <<< $SNAPS | cut -d " " -f 1`
 	if [ ! $? -eq 0 ]; then
 		echo "WARNING - restic command returned an error"
 		exit 1;
@@ -112,7 +115,7 @@ do_monitor () {
 
 	DIFF_H=`expr $DIFF_S / 3600`
 
-	MESSAGE="Last snapshot #$HASH ${DIFF_H}h ago"
+	MESSAGE="Last snapshot #$HASH ${DIFF_H}h ago|snapshots=$COUNT; age=$DIFF_H"
         RET=0
 	RET_H="OK"
 
