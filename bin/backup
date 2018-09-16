@@ -42,6 +42,8 @@ handle_params () {
 		do_monitor $@
 	else
 		shift 1
+		# define an empty default if RESTIC_ARGS is not set
+		RESTIC_ARGS=${RESTIC_ARGS:-""}
 		$RESTIC $RESTIC_ARGS $@
         fi
 }
@@ -83,6 +85,8 @@ do_monitor () {
 	WARN=$4
 	CRIT=$5
 
+	# define an empty default if RESTIC_ARGS is not set
+	RESTIC_ARGS=${RESTIC_ARGS:-""}
 	SNAPS=`$RESTIC $RESTIC_ARGS snapshots --compact --no-lock -H $3`
 	# Get last line and parse into variables. Removes header and is empty when no snapshot exists for host
 	LAST=`sed 1,2d <<< $SNAPS | head -n -2 | tail -n 1`
